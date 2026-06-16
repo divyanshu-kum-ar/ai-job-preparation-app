@@ -32,6 +32,102 @@ const interviewReportSchema = z.object({
     title: z.string().describe("The title of the job for which the interview report is generated"),
 })
 
+function normalizeLabeledArray(arr, keys) {
+    if (!Array.isArray(arr) || arr.length === 0) {
+        return []
+    }
+
+    const normalized = []
+    const keySet = new Set(keys)
+    let current = {}
+
+    for (let i = 0; i < arr.length; i += 1) {
+        const key = arr[i]
+        const value = arr[i + 1]
+
+        if (typeof key !== "string") {
+            continue
+        }
+
+        const field = key.trim()
+        if (!keySet.has(field)) {
+            continue
+        }
+
+        if (field === keys[0] && Object.keys(current).length > 0) {
+            normalized.push(current)
+            current = {}
+        }
+
+        current[field] = value
+        i += 1
+    }
+
+    if (Object.keys(current).length > 0) {
+        normalized.push(current)
+    }
+
+    return normalized
+}
+
+function safeString(value) {
+    if (typeof value === "string") {
+        return value.trim()
+    }
+    if (value == null) {
+        return ""
+    }
+    return String(value)
+}
+
+function normalizeInterviewReport(parsed) {
+    const matchScore = Number(parsed.matchScore) || 0
+
+    let technicalQuestions = Array.isArray(parsed.technicalQuestions) ? parsed.technicalQuestions : []
+    if (technicalQuestions.length > 0 && typeof technicalQuestions[0] === "string") {
+        technicalQuestions = normalizeLabeledArray(technicalQuestions, ["question", "intention", "answer"]).map(item => ({
+            question: safeString(item.question),
+            intention: safeString(item.intention),
+            answer: safeString(item.answer)
+        }))
+    }
+
+    let behavioralQuestions = Array.isArray(parsed.behavioralQuestions) ? parsed.behavioralQuestions : []
+    if (behavioralQuestions.length > 0 && typeof behavioralQuestions[0] === "string") {
+        behavioralQuestions = normalizeLabeledArray(behavioralQuestions, ["question", "intention", "answer"]).map(item => ({
+            question: safeString(item.question),
+            intention: safeString(item.intention),
+            answer: safeString(item.answer)
+        }))
+    }
+
+    let skillGaps = Array.isArray(parsed.skillGaps) ? parsed.skillGaps : []
+    if (skillGaps.length > 0 && typeof skillGaps[0] === "string") {
+        skillGaps = normalizeLabeledArray(skillGaps, ["skill", "severity"]).map(item => ({
+            skill: safeString(item.skill),
+            severity: safeString(item.severity).toLowerCase()
+        }))
+    }
+
+    let preparationPlan = Array.isArray(parsed.preparationPlan) ? parsed.preparationPlan : []
+    if (preparationPlan.length > 0 && typeof preparationPlan[0] === "string") {
+        preparationPlan = normalizeLabeledArray(preparationPlan, ["day", "focus", "tasks"]).map(item => ({
+            day: Number(item.day) || 0,
+            focus: safeString(item.focus),
+            tasks: Array.isArray(item.tasks) ? item.tasks.map(safeString) : [safeString(item.tasks)]
+        }))
+    }
+
+    return {
+        matchScore,
+        technicalQuestions,
+        behavioralQuestions,
+        skillGaps,
+        preparationPlan,
+        title: safeString(parsed.title)
+    }
+}
+
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
 
     const prompt = `You are an interview coach assistant. Respond ONLY with valid JSON exactly matching this structure, and do not include any explanatory text, markdown, or code fences:
@@ -68,15 +164,9 @@ Generate 5 technical questions, 5 behavioral questions, 3 skill gaps and a 7-day
             const rawText = response.text || response.outputText || JSON.stringify(response)
             console.log("AI raw response:", rawText)
             const parsed = JSON.parse(rawText)
+            const normalized = normalizeInterviewReport(parsed)
 
-            return {
-                matchScore: parsed.matchScore ?? 0,
-                technicalQuestions: parsed.technicalQuestions ?? [],
-                behavioralQuestions: parsed.behavioralQuestions ?? [],
-                skillGaps: parsed.skillGaps ?? [],
-                preparationPlan: parsed.preparationPlan ?? [],
-                title: parsed.title || ""
-            }
+            return normalized
         } catch (error) {
             lastError = error;
             if (error.status === 503 && attempt < maxRetries) {

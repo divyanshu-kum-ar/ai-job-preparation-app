@@ -1,4 +1,4 @@
-const { PDFParse } = require("pdf-parse");
+const pdfParse = require("pdf-parse");
 const { generateInterviewReport, generateResumePdf } = require("../services/ai.service");
 const interviewReportModel = require("../models/interviewReport.model");
 
@@ -19,11 +19,17 @@ async function generateInterViewReportController(req, res) {
         }
 
         // ✅ Parse PDF correctly
-        const parser = new PDFParse({ data: req.file.buffer });
-        const pdfData = await parser.getText();
+        const pdfData = await pdfParse(req.file.buffer);
+        const resumeText = pdfData?.text?.trim();
 
         // ✅ Extract fields
         const { selfDescription, jobDescription, title } = req.body;
+
+        if (!resumeText) {
+            return res.status(400).json({
+                message: "Unable to parse text from the uploaded resume PDF. Please upload a valid PDF file."
+            });
+        }
 
         // ✅ Validate required fields
         if (!title) {
@@ -40,7 +46,7 @@ async function generateInterViewReportController(req, res) {
 
         // ✅ Call AI service
         const interViewReportByAi = await generateInterviewReport({
-            resume: pdfData.text,
+            resume: resumeText,
             selfDescription,
             jobDescription
         });
