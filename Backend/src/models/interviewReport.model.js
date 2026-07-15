@@ -6,14 +6,17 @@ const technicalQuestionSchema = new mongoose.Schema({
         type: String,
         required: [ true, "Technical question is required" ]
     },
-    intention: {
+    topic: {
         type: String,
-        required: [ true, "Intention is required" ]
+        default: "General"
     },
-    answer: {
+    difficulty: {
         type: String,
-        required: [ true, "Answer is required" ]
-    }
+        default: "Medium"
+    },
+    expectedPoints: [ {
+        type: String
+    } ]
 }, {
     _id: false
 })
@@ -23,13 +26,13 @@ const behavioralQuestionSchema = new mongoose.Schema({
         type: String,
         required: [ true, "Behavioral question is required" ]
     },
-    intention: {
+    competency: {
         type: String,
-        required: [ true, "Intention is required" ]
+        default: "Behavioral"
     },
-    answer: {
+    answerGuidance: {
         type: String,
-        required: [ true, "Answer is required" ]
+        default: ""
     }
 }, {
     _id: false
@@ -44,12 +47,16 @@ const skillGapSchema = new mongoose.Schema({
         type: String,
         enum: [ "low", "medium", "high" ],
         required: [ true, "Severity is required" ]
+    },
+    reason: {
+        type: String,
+        default: ""
     }
 }, {
     _id: false
 })
 
-const preparationPlanSchema = new mongoose.Schema({
+const roadmapSchema = new mongoose.Schema({
     day: {
         type: Number,
         required: [ true, "Day is required" ]
@@ -62,6 +69,8 @@ const preparationPlanSchema = new mongoose.Schema({
         type: String,
         required: [ true, "Task is required" ]
     } ]
+}, {
+    _id: false
 })
 
 const interviewReportSchema = new mongoose.Schema({
@@ -93,13 +102,17 @@ const interviewReportSchema = new mongoose.Schema({
         type: [ skillGapSchema ],
         default: []
     },
+    roadmap: {
+        type: [ roadmapSchema ],
+        default: []
+    },
     preparationPlan: {
-        type: [ preparationPlanSchema ],
+        type: Array,
         default: []
     },
     user: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "users"
+        ref: "User"
     },
     title: {
         type: String,

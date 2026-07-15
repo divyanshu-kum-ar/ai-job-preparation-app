@@ -51,10 +51,31 @@ export const getAllInterviewReports = async () => {
 /**
  * @description Service to generate resume pdf based on user self description, resume content and job description.
  */
-export const generateResumePdf = async ({ interviewReportId }) => {
-    const response = await api.post(`/api/interview/resume/pdf/${interviewReportId}`, null, {
+export const generateResumePdf = async ({ interviewReportId, html }) => {
+    const response = await api.post(`/api/interview/resume/pdf/${interviewReportId}`, { html }, {
         responseType: "blob"
     })
 
+    return response.data
+}
+
+export const generateResumeHtml = async ({ interviewReportId }) => {
+    const response = await api.get(`/api/interview/resume/html/${interviewReportId}`)
+    return response.data
+}
+
+/**
+ * @description Service to delete an interview report by ID.
+ */
+export const deleteInterviewReport = async (interviewId) => {
+    const response = await api.delete(`/api/interview/report/${interviewId}`)
+    return response.data
+}
+
+/**
+ * @description Service to regenerate an interview report by ID.
+ */
+export const regenerateInterviewReport = async (interviewId) => {
+    const response = await api.post(`/api/interview/report/regenerate/${interviewId}`)
     return response.data
 }

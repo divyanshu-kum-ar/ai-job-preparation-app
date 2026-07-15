@@ -1,7 +1,35 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "../style/home.scss";
 import { useInterview } from "../hooks/useInterview.js";
 import { useNavigate } from "react-router";
+
+const LoadingScreen = () => {
+    const [msg, setMsg] = useState("Parsing Resume...");
+
+    useEffect(() => {
+        const messages = [
+            "Parsing Resume...",
+            "Analyzing Skills...",
+            "Generating Interview Strategy...",
+            "Creating Personalized Plan..."
+        ];
+        let index = 0;
+        const interval = setInterval(() => {
+            index = (index + 1) % messages.length;
+            setMsg(messages[index]);
+        }, 4000);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <main className="loading-screen" aria-live="polite">
+            <div className="loader-container">
+                <div className="spinner" aria-hidden="true"></div>
+                <h1>{msg}</h1>
+            </div>
+        </main>
+    );
+};
 
 const Home = () => {
     const { loading, generateReport, reports } = useInterview();
@@ -42,35 +70,25 @@ const Home = () => {
             });
 
             if (!data) {
-                alert("Failed to generate interview report.");
+                alert("Unable to generate report. Please try again.");
                 return;
             }
 
             if (!data._id) {
                 console.error("Invalid API Response:", data);
-                alert("Server returned invalid response.");
+                alert("Unable to generate report. Please try again.");
                 return;
             }
 
             navigate(`/interview/${data._id}`);
         } catch (error) {
             console.error("Generate Report Error:", error);
-
-            const errorMessage =
-                error?.response?.data?.message ||
-                error?.message ||
-                "Something went wrong.";
-
-            alert(errorMessage);
+            alert("Unable to generate report. Please try again.");
         }
     };
 
     if (loading) {
-        return (
-            <main className="loading-screen">
-                <h1>Loading your interview plan...</h1>
-            </main>
-        );
+        return <LoadingScreen />;
     }
 
     return (
@@ -89,33 +107,34 @@ const Home = () => {
             </header>
 
             <div className="interview-card">
+                {/* Job Title - Full Width */}
+                <div className="title-input-section">
+                    <label
+                        className="section-label"
+                        htmlFor="title"
+                    >
+                        Job Title
+                        <span className="badge badge--required">
+                            Required
+                        </span>
+                    </label>
+
+                    <input
+                        type="text"
+                        id="title"
+                        name="title"
+                        value={title}
+                        onChange={(e) =>
+                            setTitle(e.target.value)
+                        }
+                        className="title-input"
+                        placeholder="e.g. Java Backend Developer"
+                        aria-required="true"
+                        aria-label="Job Title"
+                    />
+                </div>
+
                 <div className="interview-card__body">
-
-                    {/* Job Title */}
-                    <div className="title-input-section">
-                        <label
-                            className="section-label"
-                            htmlFor="title"
-                        >
-                            Job Title
-                            <span className="badge badge--required">
-                                Required
-                            </span>
-                        </label>
-
-                        <input
-                            type="text"
-                            id="title"
-                            name="title"
-                            value={title}
-                            onChange={(e) =>
-                                setTitle(e.target.value)
-                            }
-                            className="title-input"
-                            placeholder="e.g. Java Backend Developer"
-                        />
-                    </div>
-
                     {/* Left Panel */}
                     <div className="panel panel--left">
                         <div className="panel__header">
@@ -133,6 +152,8 @@ const Home = () => {
                             className="panel__textarea"
                             placeholder="Paste the complete job description here..."
                             maxLength={5000}
+                            aria-required="true"
+                            aria-label="Job Description"
                         />
 
                         <div className="char-counter">
@@ -160,6 +181,14 @@ const Home = () => {
                             <label
                                 className="dropzone"
                                 htmlFor="resume"
+                                tabIndex="0"
+                                role="button"
+                                aria-label="Upload Resume PDF or DOCX (Max 5MB)"
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        resumeInputRef.current?.click();
+                                    }
+                                }}
                             >
                                 <p className="dropzone__title">
                                     Click to upload or drag & drop
@@ -175,7 +204,8 @@ const Home = () => {
                                     type="file"
                                     id="resume"
                                     name="resume"
-                                    accept=".pdf,.doc,.docx"
+                                    accept=".pdf,.docx"
+                                    aria-label="Resume File Upload"
                                 />
                             </label>
                         </div>
@@ -202,6 +232,7 @@ const Home = () => {
                                 name="selfDescription"
                                 className="panel__textarea panel__textarea--short"
                                 placeholder="Tell us about your skills, projects, and experience..."
+                                aria-label="Quick Self Description"
                             />
                         </div>
 
@@ -224,6 +255,7 @@ const Home = () => {
                         onClick={handleGenerateReport}
                         className="generate-btn"
                         disabled={loading}
+                        aria-label="Generate My Interview Strategy"
                     >
                         {loading
                             ? "Generating..."
@@ -232,15 +264,23 @@ const Home = () => {
                 </div>
             </div>
 
-            {reports?.length > 0 && (
-                <section className="recent-reports">
-                    <h2>My Recent Interview Plans</h2>
+            <section className="recent-reports">
+                <h2>My Recent Interview Plans</h2>
 
+                {reports && reports.length > 0 ? (
                     <ul className="reports-list">
                         {reports.map((report) => (
                             <li
                                 key={report._id}
                                 className="report-item"
+                                tabIndex="0"
+                                role="button"
+                                aria-label={`View plan for ${report.title || "Untitled Position"}`}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        navigate(`/interview/${report._id}`);
+                                    }
+                                }}
                                 onClick={() =>
                                     navigate(
                                         `/interview/${report._id}`
@@ -266,8 +306,13 @@ const Home = () => {
                             </li>
                         ))}
                     </ul>
-                </section>
-            )}
+                ) : (
+                    <div className="empty-state-history">
+                        <p className="empty-text">No interview plans yet.</p>
+                        <p className="empty-subtext">Generate your first interview strategy.</p>
+                    </div>
+                )}
+            </section>
         </div>
     );
 };
