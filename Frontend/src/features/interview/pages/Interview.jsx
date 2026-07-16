@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import '../style/interview.scss'
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate, useParams } from 'react-router'
+import { startMockInterview } from '../services/mock.api'
 
 
 
@@ -112,6 +113,39 @@ const Interview = () => {
     const { report, getReportById, loading, getResumePdf, resumeHtml, setResumeHtml, getResumeHtmlContent, deleteReport, regenerateReport } = useInterview()
     const { interviewId } = useParams()
     const navigate = useNavigate()
+
+    const [ startingMock, setStartingMock ] = useState(false)
+    const [ showMockModal, setShowMockModal ] = useState(false)
+    const [ companyMode, setCompanyMode ] = useState("Generic")
+    const [ difficulty, setDifficulty ] = useState("Medium")
+    const [ experienceLevel, setExperienceLevel ] = useState("1-2 Years")
+    const [ timerMode, setTimerMode ] = useState("untimed")
+    const [ timerLimit, setTimerLimit ] = useState(120) // 2 mins default
+    const [ enableFollowUps, setEnableFollowUps ] = useState(true)
+
+    const handleStartMock = async () => {
+        setStartingMock(true)
+        try {
+            const data = await startMockInterview({
+                reportId: interviewId,
+                companyMode,
+                difficulty,
+                experienceLevel,
+                timerMode,
+                timerLimit: timerMode === "timed" ? Number(timerLimit) : 0,
+                enableFollowUps
+            })
+            if (data && data.mockInterview) {
+                setShowMockModal(false)
+                navigate(`/mock/${data.mockInterview._id}`)
+            }
+        } catch (err) {
+            console.error("Failed to start mock interview:", err)
+            alert(err.response?.data?.message || "Failed to start mock interview. Please try again.")
+        } finally {
+            setStartingMock(false)
+        }
+    }
 
     const loadResumeHtml = async () => {
         setLoadingHtml(true)
@@ -455,6 +489,24 @@ const Interview = () => {
                 {/* ── Right Sidebar ── */}
                 <aside className='interview-sidebar'>
 
+                    {/* Start Mock Interview Button */}
+                    <div className='start-mock-interview' style={{ marginBottom: '1rem', width: '100%', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <button
+                            onClick={() => setShowMockModal(true)}
+                            className='button primary-button'
+                            style={{ width: '100%', padding: '0.85rem', fontSize: '0.9rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                        >
+                            Start Mock Interview
+                        </button>
+                        <button
+                            onClick={() => navigate('/mock/analytics')}
+                            className='button secondary-button'
+                            style={{ width: '100%', padding: '0.85rem', fontSize: '0.85rem', fontWeight: '600' }}
+                        >
+                            Performance Analytics
+                        </button>
+                    </div>
+
                     {/* Match Score */}
                     <div className='match-score'>
                         <p className='match-score__label'>Match Score</p>
@@ -497,6 +549,153 @@ const Interview = () => {
 
                 </aside>
             </div>
+
+            {showMockModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.85)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 9999,
+                    fontFamily: 'Inter, sans-serif',
+                    padding: '1rem'
+                }}>
+                    <div style={{
+                        backgroundColor: '#111120',
+                        border: '1px solid #1c1c3a',
+                        borderRadius: '1rem',
+                        padding: '2rem',
+                        width: '100%',
+                        maxWidth: '500px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '1.5rem',
+                        color: '#fff',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h2 style={{ fontSize: '1.3rem', margin: 0, fontWeight: '700' }}>Mock Interview Setup</h2>
+                            <button
+                                onClick={() => setShowMockModal(false)}
+                                style={{ background: 'none', border: 'none', color: '#888', fontSize: '1.2rem', cursor: 'pointer' }}
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        {/* Company Mode */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <label style={{ fontSize: '0.85rem', color: '#888', fontWeight: '500' }}>Target Company Style</label>
+                            <select
+                                value={companyMode}
+                                onChange={(e) => setCompanyMode(e.target.value)}
+                                style={{ backgroundColor: '#0a0a0f', border: '1px solid #1c1c3a', borderRadius: '0.5rem', color: '#fff', padding: '0.6rem', fontSize: '0.9rem', outline: 'none' }}
+                            >
+                                <option value="Generic">Generic / Default</option>
+                                <option value="Google">Google (Analytical Problem Solving)</option>
+                                <option value="Amazon">Amazon (Leadership Principles focus)</option>
+                                <option value="Microsoft">Microsoft (System & Coding design)</option>
+                                <option value="TCS">TCS (Standard Tech & Delivery)</option>
+                                <option value="Infosys">Infosys (Technical foundations)</option>
+                                <option value="Accenture">Accenture (Case Study & Solutioning)</option>
+                                <option value="Deloitte">Deloitte (Tech Consulting)</option>
+                            </select>
+                        </div>
+
+                        {/* Experience Level & Difficulty Row */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <label style={{ fontSize: '0.85rem', color: '#888', fontWeight: '500' }}>Experience level</label>
+                                <select
+                                    value={experienceLevel}
+                                    onChange={(e) => setExperienceLevel(e.target.value)}
+                                    style={{ backgroundColor: '#0a0a0f', border: '1px solid #1c1c3a', borderRadius: '0.5rem', color: '#fff', padding: '0.6rem', fontSize: '0.9rem', outline: 'none' }}
+                                >
+                                    <option value="Fresher">Fresher (Entry-level)</option>
+                                    <option value="1-2 Years">1-2 Years (Junior)</option>
+                                    <option value="3-5 Years">3-5 Years (Mid/Senior)</option>
+                                </select>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <label style={{ fontSize: '0.85rem', color: '#888', fontWeight: '500' }}>Difficulty Tier</label>
+                                <select
+                                    value={difficulty}
+                                    onChange={(e) => setDifficulty(e.target.value)}
+                                    style={{ backgroundColor: '#0a0a0f', border: '1px solid #1c1c3a', borderRadius: '0.5rem', color: '#fff', padding: '0.6rem', fontSize: '0.9rem', outline: 'none' }}
+                                >
+                                    <option value="Easy">Easy</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Hard">Hard</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Timer Options */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <label style={{ fontSize: '0.85rem', color: '#888', fontWeight: '500' }}>Response Timer Mode</label>
+                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                <label style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                                    <input type="radio" name="timerMode" value="untimed" checked={timerMode === "untimed"} onChange={() => setTimerMode("untimed")} />
+                                    Untimed
+                                </label>
+                                <label style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                                    <input type="radio" name="timerMode" value="timed" checked={timerMode === "timed"} onChange={() => setTimerMode("timed")} />
+                                    Timed
+                                </label>
+                            </div>
+                            {timerMode === "timed" && (
+                                <select
+                                    value={timerLimit}
+                                    onChange={(e) => setTimerLimit(Number(e.target.value))}
+                                    style={{ backgroundColor: '#0a0a0f', border: '1px solid #1c1c3a', borderRadius: '0.5rem', color: '#fff', padding: '0.6rem', fontSize: '0.9rem', outline: 'none', marginTop: '0.25rem' }}
+                                >
+                                    <option value={60}>1 Minute per question</option>
+                                    <option value={120}>2 Minutes per question</option>
+                                    <option value={300}>5 Minutes per question</option>
+                                </select>
+                            )}
+                        </div>
+
+                        {/* Follow-up Toggle */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <input
+                                type="checkbox"
+                                id="followup-toggle"
+                                checked={enableFollowUps}
+                                onChange={(e) => setEnableFollowUps(e.target.checked)}
+                                style={{ cursor: 'pointer' }}
+                            />
+                            <label htmlFor="followup-toggle" style={{ fontSize: '0.85rem', color: '#eee', cursor: 'pointer', userSelect: 'none' }}>
+                                Enable AI Follow-up Questions (Max 2 follow-ups per answer)
+                            </label>
+                        </div>
+
+                        {/* Launch Action */}
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                            <button
+                                onClick={() => setShowMockModal(false)}
+                                className="button secondary-button"
+                                style={{ flex: 1, padding: '0.75rem' }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleStartMock}
+                                disabled={startingMock}
+                                className="button primary-button"
+                                style={{ flex: 1, padding: '0.75rem' }}
+                            >
+                                {startingMock ? "Starting..." : "Launch Simulator"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
