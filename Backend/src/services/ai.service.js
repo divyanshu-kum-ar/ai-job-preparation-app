@@ -401,7 +401,7 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
                 })
 
                 let rawText = response.text || response.outputText || JSON.stringify(response)
-                console.log("AI raw response:", rawText)
+                console.log("[AI Report] Status: Interview report generated successfully")
                 
                 rawText = rawText.trim()
                 if (rawText.startsWith("```")) {
@@ -1259,14 +1259,7 @@ const geminiEvaluationSchema = {
 }
 
 async function evaluateMockAnswer({ question, answer, expectedPoints, topic, difficulty, isBehavioral }) {
-    console.log("----------------- [AI Evaluation Pipeline] -----------------");
-    console.log("[AI Evaluation] GOOGLE_GENAI_API_KEY loaded:", !!process.env.GOOGLE_GENAI_API_KEY);
-    console.log("[AI Evaluation] Model Name:", "gemini-2.5-flash");
-    console.log("[AI Evaluation] Question:", question);
-    console.log("[AI Evaluation] User Answer:", answer);
-    console.log("[AI Evaluation] Topic:", topic || "General");
-    console.log("[AI Evaluation] Difficulty:", difficulty || "Medium");
-    console.log("[AI Evaluation] Is Behavioral:", isBehavioral ? "Yes" : "No");
+    console.log("[AI Evaluation] Status: Evaluating answer...");
 
     const prompt = `You are an expert technical and behavioral interviewer evaluating a candidate's mock interview answer.
     Analyze the following details:
@@ -1292,7 +1285,6 @@ async function evaluateMockAnswer({ question, answer, expectedPoints, topic, dif
     
     Respond ONLY with valid JSON matching the requested schema. No code fences, no markdown formatting.
     `
-    console.log("[AI Evaluation] Prompt sent to AI:\n", prompt);
 
     const startTime = Date.now();
     let rawText = "";
@@ -1308,26 +1300,21 @@ async function evaluateMockAnswer({ question, answer, expectedPoints, topic, dif
         });
 
         const duration = Date.now() - startTime;
-        console.log(`[AI Evaluation] Request duration: ${duration}ms`);
-
         rawText = response.text || response.outputText || JSON.stringify(response);
-        console.log("[AI Evaluation] Raw AI Response:\n", rawText);
         
         rawText = rawText.trim();
         if (rawText.startsWith("```")) {
-            console.log("[AI Evaluation] Detected markdown code block, cleaning...");
             rawText = rawText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
             rawText = rawText.trim();
         }
 
         const parsed = JSON.parse(rawText);
-        console.log("[AI Evaluation] Parsing successful. Result Object:\n", JSON.stringify(parsed, null, 2));
+        console.log(`[AI Evaluation] Status: Answer evaluated successfully (${duration}ms)`);
         return parsed;
 
     } catch (error) {
         const duration = Date.now() - startTime;
-        console.error(`[AI Evaluation] Pipeline failed after ${duration}ms:`, error.message);
-        console.log("[AI Evaluation] Initiating high-quality evaluation fallback...");
+        console.error(`[AI Evaluation] Status: Pipeline failed after ${duration}ms (${error.message}). Using fallback.`);
 
         const cleanAnswer = (answer || "").trim();
         const answerWords = cleanAnswer.split(/\s+/).filter(Boolean).length;
@@ -1368,7 +1355,6 @@ async function evaluateMockAnswer({ question, answer, expectedPoints, topic, dif
             }
         };
 
-        console.log("[AI Evaluation] Fallback Result generated:\n", JSON.stringify(fallbackResult, null, 2));
         return fallbackResult;
     }
 }
