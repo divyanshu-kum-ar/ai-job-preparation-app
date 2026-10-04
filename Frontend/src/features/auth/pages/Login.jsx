@@ -1,4 +1,4 @@
-import React,{useState} from 'react'
+import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import "../auth.form.scss"
 import { useAuth } from '../hooks/useAuth'
@@ -8,22 +8,22 @@ const Login = () => {
     const { loading, handleLogin } = useAuth()
     const navigate = useNavigate()
 
-    const [ email, setEmail ] = useState("")
-    const [ password, setPassword ] = useState("")
-    const [ error, setError ] = useState("")
+    const [email, setEmail] = useState("")
+    const [password, setPassword] = useState("")
+    const [error, setError] = useState("")
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         setError("")
         try {
-            await handleLogin({email,password})
+            await handleLogin({ email, password })
             navigate('/')
         } catch (err) {
             setError(err.response?.data?.message || "Invalid email or password")
         }
     }
 
-    if(loading){
+    if (loading) {
         return (<main><h1>Loading.......</h1></main>)
     }
 
